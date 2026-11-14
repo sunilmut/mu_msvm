@@ -508,6 +508,7 @@ enum UefiStructureType {
   UefiConfigHmat                           = 0x26,
   UefiConfigIort                           = 0x27,
   UefiConfigPcieBarApertures               = 0x28,
+  UefiConfigRamDisk                        = 0x29,
 };
 
 //
@@ -568,6 +569,19 @@ typedef struct _UEFI_CONFIG_MEMORY_MAP {
   UEFI_CONFIG_HEADER    Header;
   UINT8                 MemoryMap[];
 } UEFI_CONFIG_MEMORY_MAP;
+
+//
+// Raw disk image in already accessible guest memory. The entire page-aligned
+// range must be platform-reserved in the V5 memory map. Flags must be zero.
+//
+typedef struct _UEFI_CONFIG_RAM_DISK {
+  UEFI_CONFIG_HEADER    Header;
+  UINT64                BaseAddress;
+  UINT64                ImageSize;
+  UINT64                Flags;
+} UEFI_CONFIG_RAM_DISK;
+
+STATIC_ASSERT (sizeof (UEFI_CONFIG_RAM_DISK) == 32, "UEFI_CONFIG_RAM_DISK must be 32 bytes");
 
 typedef struct _UEFI_CONFIG_ENTROPY {
   UEFI_CONFIG_HEADER    Header;

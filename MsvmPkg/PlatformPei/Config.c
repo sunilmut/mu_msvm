@@ -1202,6 +1202,7 @@ Return Value:
     0,                                                     // UefiConfigHmat
     0,                                                     // UefiConfigIort
     0,                                                     // UefiConfigPcieBarApertures
+    sizeof (UEFI_CONFIG_RAM_DISK),                         // UefiConfigRamDisk
   };
 
   //
@@ -1697,6 +1698,26 @@ Return Value:
       }
  #endif
 
+      case UefiConfigRamDisk:
+      {
+        UEFI_CONFIG_RAM_DISK  *ramDisk = (UEFI_CONFIG_RAM_DISK *)header;
+
+        if ((PcdGet64 (PcdRamDiskImageSize) != 0) ||
+            (ramDisk->BaseAddress == 0) || (ramDisk->ImageSize == 0) ||
+            ((ramDisk->BaseAddress & EFI_PAGE_MASK) != 0) ||
+            ((ramDisk->ImageSize & EFI_PAGE_MASK) != 0) ||
+            (ramDisk->ImageSize > MAX_UINT64 - ramDisk->BaseAddress) ||
+            (ramDisk->Flags != 0))
+        {
+          DEBUG ((DEBUG_ERROR, "*** Invalid or duplicate RAM-disk description\n"));
+          FAIL_FAST_UNEXPECTED_HOST_BEHAVIOR ();
+        }
+
+        PEI_FAIL_FAST_IF_FAILED (PcdSet64S (PcdRamDiskBaseAddress, ramDisk->BaseAddress));
+        PEI_FAIL_FAST_IF_FAILED (PcdSet64S (PcdRamDiskImageSize, ramDisk->ImageSize));
+        break;
+      }
+
       case UefiConfigPcieBarApertures:
       {
         UEFI_CONFIG_PCIE_BAR_APERTURES  *apertures =
@@ -1783,6 +1804,133 @@ Return Value:
   return EFI_SUCCESS;
 }
 
+STATIC
+EFI_STATUS
+ValidateRamDiskMemoryMap (
+  IN UINT64  Base,
+  IN UINT64  Size
+  )
+{
+  VM_MEMORY_RANGE_V5  *ranges = (VOID *)(UINTN)PcdGet64 (PcdMemoryMapPtr);
+  UINT32              mapSize = PcdGet32 (PcdMemoryMapSize);
+  UINT32              matches = 0;
+  UINT32              index;
+  UINT64              end = Base + Size;
+  UINT64              rangeEnd;
+
+  if (PcdGetBool (PcdLegacyMemoryMap) || (ranges == NULL) ||
+      (mapSize == 0) || ((mapSize % sizeof (*ranges)) != 0))
+  {
+    DEBUG ((DEBUG_ERROR, "*** RAM disk requires a valid V5 memory map\n"));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  for (index = 0; index < mapSize / sizeof (*ranges); index++) {
+    if ((ranges[index].Length == 0) ||
+        (ranges[index].Length > MAX_UINT64 - ranges[index].BaseAddress))
+    {
+      DEBUG ((DEBUG_ERROR, "*** Invalid RAM-disk backing memory map range\n"));
+      return EFI_INVALID_PARAMETER;
+    }
+
+    rangeEnd = ranges[index].BaseAddress + ranges[index].Length;
+    if ((Base < rangeEnd) && (ranges[index].BaseAddress < end)) {
+      if ((ranges[index].Flags != VM_MEMORY_RANGE_FLAG_PLATFORM_RESERVED) ||
+          (ranges[index].Reserved != 0) ||
+          ((ranges[index].BaseAddress & EFI_PAGE_MASK) != 0) ||
+          ((ranges[index].Length & EFI_PAGE_MASK) != 0) ||
+          (ranges[index].BaseAddress > Base) || (rangeEnd < end))
+      {
+        DEBUG ((DEBUG_ERROR, "*** RAM disk overlaps non-reserved or partial backing\n"));
+        return EFI_INVALID_PARAMETER;
+      }
+
+      matches++;
+    }
+  }
+
+  if (matches != 1) {
+    DEBUG ((DEBUG_ERROR, "*** RAM disk must have exactly one reserved backing range\n"));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+CheckRamDiskMmioOverlap (
+  IN UINT64  Base,
+  IN UINT64  Size,
+  IN UINT64  MmioBasePage,
+  IN UINT64  MmioPageCount
+  )
+{
+  UINT64  basePage = Base >> EFI_PAGE_SHIFT;
+  UINT64  endPage  = (Base + Size) >> EFI_PAGE_SHIFT;
+  UINT64  mmioEndPage;
+
+  if (MmioPageCount == 0) {
+    return EFI_SUCCESS;
+  }
+
+  if (RETURN_ERROR (SafeUint64Add (MmioBasePage, MmioPageCount, &mmioEndPage)) ||
+      ((basePage < mmioEndPage) && (MmioBasePage < endPage)))
+  {
+    DEBUG ((DEBUG_ERROR, "*** RAM disk overlaps an MMIO gap or invalid MMIO range\n"));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  return EFI_SUCCESS;
+}
+
+STATIC
+EFI_STATUS
+ValidateRamDiskConfiguration (
+  IN UINT8  PhysicalAddressWidth
+  )
+{
+  UINT64      base = PcdGet64 (PcdRamDiskBaseAddress);
+  UINT64      size = PcdGet64 (PcdRamDiskImageSize);
+  UINT64      minimumBase;
+  EFI_STATUS  status;
+
+  if (size == 0) {
+    return EFI_SUCCESS;
+  }
+
+  minimumBase = (UINT64)(UINTN)GetStartOfConfigBlob () +
+                ALIGN_VALUE ((UINT64)PcdGet32 (PcdConfigBlobSize), EFI_PAGE_SIZE);
+  if ((base < minimumBase) ||
+      ((PhysicalAddressWidth < 64) && (((base + size - 1) >> PhysicalAddressWidth) != 0)))
+  {
+    DEBUG ((DEBUG_ERROR, "*** RAM disk overlaps firmware/configuration or exceeds physical address space\n"));
+    return EFI_INVALID_PARAMETER;
+  }
+
+  status = CheckRamDiskMmioOverlap (
+             base,
+             size,
+             PcdGet64 (PcdLowMmioGapBasePageNumber),
+             PcdGet64 (PcdLowMmioGapSizeInPages)
+             );
+  if (EFI_ERROR (status)) {
+    return status;
+  }
+
+  status = CheckRamDiskMmioOverlap (
+             base,
+             size,
+             PcdGet64 (PcdHighMmioGapBasePageNumber),
+             PcdGet64 (PcdHighMmioGapSizeInPages)
+             );
+  if (EFI_ERROR (status)) {
+    return status;
+  }
+
+  return ValidateRamDiskMemoryMap (base, size);
+}
+
 EFI_STATUS
 GetConfiguration (
   IN CONST    EFI_PEI_SERVICES  **PeiServices,
@@ -1832,6 +1980,12 @@ Return Value:
   // Get the address width.
   //
   *PhysicalAddressWidth = GetPhysicalAddressWidth (PeiServices);
+
+  status = ValidateRamDiskConfiguration (*PhysicalAddressWidth);
+  if (EFI_ERROR (status)) {
+    FAIL_FAST_UNEXPECTED_HOST_BEHAVIOR ();
+    return status;
+  }
 
   return EFI_SUCCESS;
 }

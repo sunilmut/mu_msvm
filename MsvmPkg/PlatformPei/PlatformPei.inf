@@ -99,6 +99,8 @@
     gMsvmPkgTokenSpaceGuid.PcdMadtSize
     gMsvmPkgTokenSpaceGuid.PcdMemoryMapPtr
     gMsvmPkgTokenSpaceGuid.PcdMemoryMapSize
+    gMsvmPkgTokenSpaceGuid.PcdRamDiskBaseAddress
+    gMsvmPkgTokenSpaceGuid.PcdRamDiskImageSize
     gMsvmPkgTokenSpaceGuid.PcdEntropyPtr
     gMsvmPkgTokenSpaceGuid.PcdBiosGuidPtr
     gMsvmPkgTokenSpaceGuid.PcdSmbiosSystemManufacturerStr
@@ -215,4 +217,3 @@
 
 [Depex]
     TRUE
-

@@ -1,0 +1,42 @@
+## @file
+# Register an optional platform-provided, reserved RAM-disk image.
+#
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MsvmRamDiskDxe
+  FILE_GUID                      = 0f4e97e7-8cd1-4d1d-8427-a3e604878d42
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = MsvmRamDiskDxeEntryPoint
+
+[Sources]
+  MsvmRamDiskDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MsvmPkg/MsvmPkg.dec
+
+[LibraryClasses]
+  DebugLib
+  MemoryAllocationLib
+  PcdLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+
+[Guids]
+  gMuBootRamDiskGuid
+
+[Protocols]
+  gEfiRamDiskProtocolGuid
+
+[Pcd]
+  gMsvmPkgTokenSpaceGuid.PcdRamDiskBaseAddress
+  gMsvmPkgTokenSpaceGuid.PcdRamDiskImageSize
+
+[Depex]
+  gEfiRamDiskProtocolGuid

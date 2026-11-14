@@ -419,3 +419,7 @@
   gMsvmPkgTokenSpaceGuid.PcdPcieBarAperturesPtr|0x0|UINT64|0x6074
   ## Size in bytes of PcieBarApertures data
   gMsvmPkgTokenSpaceGuid.PcdPcieBarAperturesSize|0x0|UINT32|0x6075
+
+  # Optional platform-reserved raw RAM-disk image.
+  gMsvmPkgTokenSpaceGuid.PcdRamDiskBaseAddress|0x0|UINT64|0x6079
+  gMsvmPkgTokenSpaceGuid.PcdRamDiskImageSize|0x0|UINT64|0x607A

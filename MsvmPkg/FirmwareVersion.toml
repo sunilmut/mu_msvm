@@ -13,8 +13,9 @@
 #   - Bump minor for a backward-compatible addition the VMM can degrade without.
 [interface]
 # Interface 2.0 uses a combined PEI/DXE firmware volume on X64 and AARCH64.
+# Interface 2.1 adds the optional typed RAM-disk configuration entry.
 major = 2
-minor = 0
+minor = 1
 
 # Release version prefix ("major.minor"). The GitHub release workflow may
 # override this via the BASE_VERSION environment variable and assigns the patch

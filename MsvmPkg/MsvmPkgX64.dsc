@@ -587,6 +587,8 @@
   # UEFI Config information from the BiosDevice
   # UEFI_CONFIG_STRUCTURE_COUNT
   gMsvmPkgTokenSpaceGuid.PcdConfigBlobSize|0x0
+  gMsvmPkgTokenSpaceGuid.PcdRamDiskBaseAddress|0x0
+  gMsvmPkgTokenSpaceGuid.PcdRamDiskImageSize|0x0
   # UEFI_CONFIG_BIOS_INFORMATION
   gMsvmPkgTokenSpaceGuid.PcdLegacyMemoryMap|0x0
 
@@ -900,6 +902,7 @@
   MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
   MdeModulePkg/Universal/Disk/RamDiskDxe/RamDiskDxe.inf
+  MsvmPkg/RamDiskDxe/MsvmRamDiskDxe.inf
   MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf {
     <LibraryClasses>
       UefiHiiServicesLib|MdeModulePkg/Library/UefiHiiServicesLib/UefiHiiServicesLib.inf
