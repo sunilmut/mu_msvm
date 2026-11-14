@@ -42,6 +42,12 @@ HobAddReservedMemoryRange (
   );
 
 void
+HobAddRamDiskMemoryRange (
+  EFI_PHYSICAL_ADDRESS  BaseAddress,
+  UINT64                Size
+  );
+
+void
 HobAddUntestedMemoryRange (
   IN OUT  PPLATFORM_INIT_CONTEXT  Context,
   EFI_PHYSICAL_ADDRESS            BaseAddress,

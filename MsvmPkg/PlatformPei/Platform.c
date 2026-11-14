@@ -477,6 +477,8 @@ Return Value:
   PVM_MEMORY_RANGE_V5  rangeV5;
   BOOLEAN              suppressBiosDevice;
   UINT64               truncateSize;
+  UINT64               ramDiskBase = PcdGet64 (PcdRamDiskBaseAddress);
+  UINT64               ramDiskSize = PcdGet64 (PcdRamDiskImageSize);
 
  #if defined (MDE_CPU_X64)
   BOOLEAN  hostEmulatorsWhenHardwareIsolated = PcdGetBool (PcdHostEmulatorsWhenHardwareIsolated);
@@ -620,7 +622,23 @@ Return Value:
         // Pass 1: Create a HOB describing this region.
         //
         if (rangeFlags & VM_MEMORY_RANGE_FLAG_PLATFORM_RESERVED) {
-          HobAddReservedMemoryRange (rangeBase, rangeLength);
+          if ((ramDiskSize != 0) && (rangeBase <= ramDiskBase) &&
+              (ramDiskBase + ramDiskSize <= rangeBase + rangeLength))
+          {
+            if (rangeBase < ramDiskBase) {
+              HobAddReservedMemoryRange (rangeBase, ramDiskBase - rangeBase);
+            }
+
+            HobAddRamDiskMemoryRange (ramDiskBase, ramDiskSize);
+            if (ramDiskBase + ramDiskSize < rangeBase + rangeLength) {
+              HobAddReservedMemoryRange (
+                ramDiskBase + ramDiskSize,
+                rangeBase + rangeLength - (ramDiskBase + ramDiskSize)
+                );
+            }
+          } else {
+            HobAddReservedMemoryRange (rangeBase, rangeLength);
+          }
         } else if (rangeFlags & VM_MEMORY_RANGE_FLAG_PERSISTENT_MEMORY) {
           HobAddPersistentMemoryRange (rangeBase, rangeLength);
         } else if (rangeFlags & VM_MEMORY_RANGE_FLAG_SPECIFIC_PURPOSE) {

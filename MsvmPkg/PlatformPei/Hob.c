@@ -335,6 +335,26 @@ Return Value:
 }
 
 void
+HobAddRamDiskMemoryRange (
+  EFI_PHYSICAL_ADDRESS  BaseAddress,
+  UINT64                Size
+  )
+{
+  //
+  // The image is normal RAM, not device memory. In particular, filesystem
+  // accesses on AARCH64 may be unaligned and require a normal-memory mapping.
+  //
+  BuildResourceDescriptorV2 (
+    EFI_RESOURCE_MEMORY_RESERVED,
+    MEMORY_FLAGS,
+    BaseAddress,
+    Size,
+    EFI_MEMORY_WB,
+    NULL
+    );
+}
+
+void
 HobAddUntestedMemoryRange (
   IN OUT  PPLATFORM_INIT_CONTEXT  Context,
   EFI_PHYSICAL_ADDRESS            BaseAddress,

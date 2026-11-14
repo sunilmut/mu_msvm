@@ -39,7 +39,10 @@ RAM-disk registration.
 
 PEI validates the description before memory initialization. The existing
 platform-reserved resource path excludes the backing from allocations and page
-acceptance. DXE checks that the resulting EFI memory map still marks the entire
+acceptance. The image is published as reserved, write-back normal RAM rather
+than uncached device memory, so filesystem accesses may be unaligned on AARCH64.
+Any surrounding reserved memory retains its existing attributes.
+DXE checks that the resulting EFI memory map still marks the entire
 image `EfiReservedMemoryType` before registration. It remains reserved after
 `ExitBootServices`; it is not reclaimed by this driver.
 
